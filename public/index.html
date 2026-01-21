@@ -24,8 +24,9 @@
 
  <script>
   const API = "/blogs";
+  let editingId = null; // ← id редактируемого поста
 
-  async function createBlog() {
+  async function createOrUpdateBlog() {
     const title = document.getElementById("title").value;
     const body = document.getElementById("body").value;
     const author = document.getElementById("author").value;
@@ -35,26 +36,42 @@
       return;
     }
 
-    await fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, author })
-    });
+    // если editingId есть → UPDATE
+    if (editingId) {
+      await fetch(`${API}/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body, author })
+      });
+      editingId = null;
+      document.querySelector(".btn-create").textContent = "Create";
+    } 
+    // иначе → CREATE
+    else {
+      await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body, author })
+      });
+    }
 
-    document.getElementById("title").value = "";
-    document.getElementById("body").value = "";
-    document.getElementById("author").value = "";
-
+    clearForm();
     loadBlogs();
+  }
+
+  function editBlog(blog) {
+    document.getElementById("title").value = blog.title;
+    document.getElementById("body").value = blog.body;
+    document.getElementById("author").value = blog.author;
+
+    editingId = blog._id;
+    document.querySelector(".btn-create").textContent = "Update";
   }
 
   async function deleteBlog(id) {
     if (!confirm("Delete this blog?")) return;
 
-    await fetch(`${API}/${id}`, {
-      method: "DELETE"
-    });
-
+    await fetch(`${API}/${id}`, { method: "DELETE" });
     loadBlogs();
   }
 
@@ -66,7 +83,12 @@
       <div class="blog">
         <h3>${b.title}</h3>
         <p>${b.body}</p>
-        <small>Author: ${b.author}</small>
+        <small>Author: ${b.author}</small><br>
+
+        <button onclick='editBlog(${JSON.stringify(b)})'>
+          Edit
+        </button>
+
         <button class="btn-delete" onclick="deleteBlog('${b._id}')">
           Delete
         </button>
@@ -74,8 +96,15 @@
     `).join("");
   }
 
+  function clearForm() {
+    document.getElementById("title").value = "";
+    document.getElementById("body").value = "";
+    document.getElementById("author").value = "";
+  }
+
   loadBlogs();
 </script>
+
 
 
 </body>
